@@ -31,6 +31,7 @@ logo_base64 = get_base64_image("logo.png")
 # ==============================
 st.markdown(f"""
 <style>
+
 .stApp {{
     background: #f1f5f9;
     font-family: 'Segoe UI', sans-serif;
@@ -106,11 +107,9 @@ st.markdown(f"""
 }}
 
 @media screen and (max-width: 768px) {{
-
     .chat-bubble {{
         max-width: 92%;
     }}
-
 }}
 
 </style>
@@ -129,7 +128,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==============================
-# INIT CLIENT (API)
+# INIT API CLIENT
 # ==============================
 client = InferenceClient(
     model="Qwen/Qwen2.5-0.5B-Instruct",
@@ -137,7 +136,7 @@ client = InferenceClient(
 )
 
 # ==============================
-# SESSION
+# SESSION STATE
 # ==============================
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -175,16 +174,25 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
 
     with st.spinner("Chatbot sedang mengetik..."):
 
-        response = client.chat_completion(
-            messages=[
-                {"role": "system", "content": "Jawab dalam Bahasa Indonesia dengan jelas dan profesional."},
-                *st.session_state.messages
-            ],
-            max_tokens=150,
-            temperature=0.4
+        # Gabungkan history jadi satu prompt
+        prompt_text = (
+            "Kamu adalah Chatbot AI resmi SMAN 1 TUNJUNGAN.\n"
+            "Jawab dalam Bahasa Indonesia yang jelas dan profesional.\n\n"
         )
 
-        reply = response.choices[0].message.content
+        for m in st.session_state.messages:
+            prompt_text += f"{m['role']}: {m['content']}\n"
+
+        prompt_text += "assistant:"
+
+        response = client.text_generation(
+            prompt_text,
+            max_new_tokens=200,
+            temperature=0.3,
+            top_p=0.9
+        )
+
+        reply = response.strip()
 
     st.session_state.messages.append({"role": "assistant", "content": reply})
 
