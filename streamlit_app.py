@@ -17,7 +17,7 @@ st.set_page_config(
 # ==============================
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
-model = genai.GenerativeModel("models/gemini-1.5-flash")
+model = genai.GenerativeModel("models/models/gemini-2.5-flash-lite")
 
 # ==============================
 # LOAD LOGO
@@ -169,4 +169,4 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
     st.session_state.messages.append({"role": "assistant", "content": reply})
     st.markdown(f"<div class='chat-bubble bot'>{reply}</div>", unsafe_allow_html=True)
 
-st.write([m.name for m in genai.list_models()])
+
