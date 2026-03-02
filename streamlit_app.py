@@ -1,9 +1,9 @@
 import base64
-import requests
 import streamlit as st
+from openai import OpenAI
 
 # ==============================
-# PAGE CONFIG
+# CONFIG
 # ==============================
 st.set_page_config(
     page_title="SMAN 1 TUNJUNGAN - Chatbot AI",
@@ -14,11 +14,11 @@ st.set_page_config(
 
 HF_TOKEN = st.secrets["HF_TOKEN"]
 
-API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
-
-headers = {
-    "Authorization": f"Bearer {HF_TOKEN}"
-}
+# OpenAI-compatible client (HuggingFace endpoint)
+client = OpenAI(
+    base_url="https://api-inference.huggingface.co/v1/",
+    api_key=HF_TOKEN
+)
 
 # ==============================
 # LOAD LOGO
@@ -30,7 +30,7 @@ def get_base64_image(image_path):
 logo_base64 = get_base64_image("logo.png")
 
 # ==============================
-# UI STYLE
+# UI
 # ==============================
 st.markdown(f"""
 <style>
@@ -38,7 +38,6 @@ st.markdown(f"""
     background: #f1f5f9;
     font-family: 'Segoe UI', sans-serif;
 }}
-
 .fixed-header {{
     position: fixed;
     top: 55px;
@@ -52,35 +51,29 @@ st.markdown(f"""
     box-shadow: 0 6px 20px rgba(0,0,0,0.05);
     z-index: 999;
 }}
-
 .header-content {{
     display: flex;
     align-items: center;
     gap: 15px;
 }}
-
 .school-logo {{
     width: 65px;
     height: 65px;
 }}
-
 .header-text h1 {{
     font-size: 26px;
     margin: 0;
     font-weight: 800;
     color: #1e293b;
 }}
-
 .header-text p {{
     font-size: 13px;
     margin-top: 4px;
     color: #64748b;
 }}
-
 .header-spacer {{
     height: 170px;
 }}
-
 .chat-bubble {{
     padding: 14px 18px;
     border-radius: 18px;
@@ -89,23 +82,16 @@ st.markdown(f"""
     max-width: 75%;
     line-height: 1.6;
 }}
-
 .user {{
     background: #2563eb;
     color: white;
     margin-left: auto;
 }}
-
 .bot {{
     background: white;
     border: 1px solid #e2e8f0;
     color: #1e293b;
     margin-right: auto;
-}}
-
-[data-testid="stChatInput"] {{
-    max-width: 800px;
-    margin: auto;
 }}
 </style>
 
@@ -123,7 +109,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==============================
-# SESSION STATE
+# SESSION
 # ==============================
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -133,15 +119,9 @@ if "messages" not in st.session_state:
 # ==============================
 for msg in st.session_state.messages:
     if msg["role"] == "user":
-        st.markdown(
-            f"<div class='chat-bubble user'>{msg['content']}</div>",
-            unsafe_allow_html=True
-        )
+        st.markdown(f"<div class='chat-bubble user'>{msg['content']}</div>", unsafe_allow_html=True)
     else:
-        st.markdown(
-            f"<div class='chat-bubble bot'>{msg['content']}</div>",
-            unsafe_allow_html=True
-        )
+        st.markdown(f"<div class='chat-bubble bot'>{msg['content']}</div>", unsafe_allow_html=True)
 
 # ==============================
 # INPUT
@@ -149,43 +129,24 @@ for msg in st.session_state.messages:
 if prompt := st.chat_input("Tulis pertanyaan Anda..."):
 
     st.session_state.messages.append({"role": "user", "content": prompt})
-
-    st.markdown(
-        f"<div class='chat-bubble user'>{prompt}</div>",
-        unsafe_allow_html=True
-    )
+    st.markdown(f"<div class='chat-bubble user'>{prompt}</div>", unsafe_allow_html=True)
 
     with st.spinner("Chatbot sedang mengetik..."):
 
-        full_prompt = (
-            "Kamu adalah Chatbot AI resmi SMAN 1 TUNJUNGAN. "
-            "Jawab dalam Bahasa Indonesia yang jelas dan profesional.\n\n"
+        completion = client.chat.completions.create(
+            model="Qwen/Qwen2.5-0.5B-Instruct",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Kamu adalah Chatbot AI resmi SMAN 1 TUNJUNGAN. Jawab dalam Bahasa Indonesia yang jelas dan profesional."
+                },
+                *st.session_state.messages
+            ],
+            max_tokens=200,
+            temperature=0.3
         )
 
-        for m in st.session_state.messages:
-            full_prompt += f"{m['role']}: {m['content']}\n"
-
-        payload = {
-            "inputs": full_prompt,
-            "parameters": {
-                "max_new_tokens": 200,
-                "temperature": 0.3,
-                "top_p": 0.9
-            }
-        }
-
-        response = requests.post(API_URL, headers=headers, json=payload)
-
-        result = response.json()
-
-        if isinstance(result, list):
-            reply = result[0]["generated_text"].split("assistant:")[-1].strip()
-        else:
-            reply = "Terjadi kesalahan pada server model."
+        reply = completion.choices[0].message.content
 
     st.session_state.messages.append({"role": "assistant", "content": reply})
-
-    st.markdown(
-        f"<div class='chat-bubble bot'>{reply}</div>",
-        unsafe_allow_html=True
-    )
+    st.markdown(f"<div class='chat-bubble bot'>{reply}</div>", unsafe_allow_html=True)
