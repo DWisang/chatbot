@@ -2,10 +2,7 @@ import streamlit as st
 from huggingface_hub import InferenceClient
 
 st.title("💬 Chatbot (Hugging Face)")
-
-st.write(
-    "This chatbot uses a Hugging Face model via Inference API."
-)
+st.write("This chatbot uses a Hugging Face model via Inference API.")
 
 hf_token = st.text_input("Hugging Face API Key", type="password")
 
@@ -20,10 +17,12 @@ else:
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
+    # Tampilkan history
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
+    # Input user
     if prompt := st.chat_input("What is up?"):
 
         st.session_state.messages.append(
@@ -33,16 +32,18 @@ else:
         with st.chat_message("user"):
             st.markdown(prompt)
 
-       prompt_text = ""
+        # Gabungkan jadi satu prompt text
+        prompt_text = ""
         for m in st.session_state.messages:
             prompt_text += f"{m['role']}: {m['content']}\n"
-        
+
+        # Generate response
         response = client.text_generation(
             prompt_text,
             max_new_tokens=300,
         )
 
-reply = response
+        reply = response
 
         with st.chat_message("assistant"):
             st.markdown(reply)
