@@ -131,7 +131,7 @@ st.markdown(f"""
 # INIT API CLIENT
 # ==============================
 client = InferenceClient(
-    model="Qwen/Qwen2.5-0.5B-Instruct",
+    model="HuggingFaceH4/zephyr-7b-beta",
     token=HF_TOKEN
 )
 
@@ -174,25 +174,22 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
 
     with st.spinner("Chatbot sedang mengetik..."):
 
-        # Gabungkan history jadi satu prompt
-        prompt_text = (
-            "Kamu adalah Chatbot AI resmi SMAN 1 TUNJUNGAN.\n"
-            "Jawab dalam Bahasa Indonesia yang jelas dan profesional.\n\n"
+        response = client.chat_completion(
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Kamu adalah Chatbot AI resmi SMAN 1 TUNJUNGAN. "
+                        "Jawab dalam Bahasa Indonesia yang jelas, sopan, dan profesional."
+                    )
+                },
+                *st.session_state.messages
+            ],
+            max_tokens=200,
+            temperature=0.3
         )
 
-        for m in st.session_state.messages:
-            prompt_text += f"{m['role']}: {m['content']}\n"
-
-        prompt_text += "assistant:"
-
-        response = client.text_generation(
-            prompt_text,
-            max_new_tokens=200,
-            temperature=0.3,
-            top_p=0.9
-        )
-
-        reply = response.strip()
+        reply = response.choices[0].message.content
 
     st.session_state.messages.append({"role": "assistant", "content": reply})
 
