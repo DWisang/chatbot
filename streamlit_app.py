@@ -1,7 +1,6 @@
 import base64
 import streamlit as st
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from huggingface_hub import InferenceClient
 
 # ==============================
 # PAGE CONFIG
@@ -28,19 +27,13 @@ def get_base64_image(image_path):
 logo_base64 = get_base64_image("logo.png")
 
 # ==============================
-# RESPONSIVE UI STYLE
+# UI STYLE
 # ==============================
 st.markdown(f"""
 <style>
-
 .stApp {{
     background: #f1f5f9;
     font-family: 'Segoe UI', sans-serif;
-}}
-
-.block-container {{
-    max-width: 1000px;
-    margin: auto;
 }}
 
 .fixed-header {{
@@ -48,7 +41,7 @@ st.markdown(f"""
     top: 55px;
     left: 0;
     right: 0;
-    height: 120px;
+    height: 110px;
     background: white;
     display: flex;
     align-items: center;
@@ -60,29 +53,29 @@ st.markdown(f"""
 .header-content {{
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 15px;
 }}
 
 .school-logo {{
-    width: 75px;
-    height: 75px;
+    width: 65px;
+    height: 65px;
 }}
 
 .header-text h1 {{
-    font-size: 30px;
-    font-weight: 800;
+    font-size: 26px;
     margin: 0;
+    font-weight: 800;
     color: #1e293b;
 }}
 
 .header-text p {{
-    font-size: 14px;
-    margin: 4px 0 0 0;
+    font-size: 13px;
+    margin-top: 4px;
     color: #64748b;
 }}
 
 .header-spacer {{
-    height: 190px;
+    height: 170px;
 }}
 
 .chat-bubble {{
@@ -90,7 +83,7 @@ st.markdown(f"""
     border-radius: 18px;
     margin-bottom: 12px;
     font-size: 15px;
-    max-width: 70%;
+    max-width: 75%;
     line-height: 1.6;
 }}
 
@@ -114,34 +107,8 @@ st.markdown(f"""
 
 @media screen and (max-width: 768px) {{
 
-    .fixed-header {{
-        height: 85px;
-        top: 50px;
-    }}
-
-    .school-logo {{
-        width: 50px;
-        height: 50px;
-    }}
-
-    .header-text h1 {{
-        font-size: 20px;
-    }}
-
-    .header-text p {{
-        font-size: 12px;
-    }}
-
-    .header-spacer {{
-        height: 140px;
-    }}
-
     .chat-bubble {{
         max-width: 92%;
-    }}
-
-    [data-testid="stChatInput"] {{
-        max-width: 100%;
     }}
 
 }}
@@ -162,54 +129,26 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==============================
-# MODEL
+# INIT CLIENT (API)
 # ==============================
-model_id = "Qwen/Qwen2.5-0.5B-Instruct"
-
-@st.cache_resource
-def load_model():
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_id,
-        token=HF_TOKEN
-    )
-    model = AutoModelForCausalLM.from_pretrained(
-        model_id,
-        token=HF_TOKEN,
-        torch_dtype=torch.float32,
-        device_map="auto",
-        low_cpu_mem_usage=True
-    )
-    return tokenizer, model
-
-tokenizer, model = load_model()
+client = InferenceClient(
+    model="Qwen/Qwen2.5-0.5B-Instruct",
+    token=HF_TOKEN
+)
 
 # ==============================
-# SESSION STATE
+# SESSION
 # ==============================
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "system_added" not in st.session_state:
-    st.session_state.messages.append({
-        "role": "system",
-        "content": (
-            "Kamu adalah Chatbot AI resmi SMAN 1 TUNJUNGAN. "
-            "Jawab dalam Bahasa Indonesia yang jelas dan profesional. "
-            "Jika tidak yakin, katakan dengan jujur."
-        )
-    })
-    st.session_state.system_added = True
-
 # ==============================
-# CHAT DISPLAY
+# DISPLAY CHAT
 # ==============================
 chat_area = st.container()
 
 with chat_area:
     for msg in st.session_state.messages:
-        if msg["role"] == "system":
-            continue
-
         if msg["role"] == "user":
             st.markdown(
                 f"<div class='chat-bubble user'>{msg['content']}</div>",
@@ -226,10 +165,7 @@ with chat_area:
 # ==============================
 if prompt := st.chat_input("Tulis pertanyaan Anda..."):
 
-    st.session_state.messages.append({
-        "role": "user",
-        "content": prompt
-    })
+    st.session_state.messages.append({"role": "user", "content": prompt})
 
     with chat_area:
         st.markdown(
@@ -239,30 +175,18 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
 
     with st.spinner("Chatbot sedang mengetik..."):
 
-        text = tokenizer.apply_chat_template(
-            st.session_state.messages,
-            tokenize=False,
-            add_generation_prompt=True
+        response = client.chat_completion(
+            messages=[
+                {"role": "system", "content": "Jawab dalam Bahasa Indonesia dengan jelas dan profesional."},
+                *st.session_state.messages
+            ],
+            max_tokens=150,
+            temperature=0.4
         )
 
-        inputs = tokenizer(text, return_tensors="pt").to(model.device)
+        reply = response.choices[0].message.content
 
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=150,
-            temperature=0.35,
-            top_p=0.9,
-            repetition_penalty=1.25,
-            do_sample=True
-        )
-
-        response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        reply = response.split("assistant")[-1].strip()
-
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": reply
-    })
+    st.session_state.messages.append({"role": "assistant", "content": reply})
 
     with chat_area:
         st.markdown(
