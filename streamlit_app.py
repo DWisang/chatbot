@@ -1,6 +1,6 @@
 import base64
 import streamlit as st
-from openai import OpenAI
+import google.generativeai as genai
 
 # ==============================
 # CONFIG
@@ -12,7 +12,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# ==============================
+# GEMINI API
+# ==============================
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 # ==============================
 # LOAD LOGO
@@ -107,7 +112,6 @@ st.markdown(f"""
         max-width: 92%;
     }}
 }}
-
 </style>
 
 <div class="fixed-header">
@@ -148,20 +152,19 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
 
     with st.spinner("Chatbot sedang mengetik..."):
 
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",   # hemat & cepat
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Kamu adalah Chatbot AI resmi SMAN 1 TUNJUNGAN. Jawab dalam Bahasa Indonesia yang jelas dan profesional."
-                },
-                *st.session_state.messages
-            ],
-            max_tokens=200,
-            temperature=0.3
+        chat_history = ""
+
+        for m in st.session_state.messages:
+            chat_history += f"{m['role']}: {m['content']}\n"
+
+        full_prompt = (
+            "Kamu adalah Chatbot AI resmi SMAN 1 TUNJUNGAN. "
+            "Jawab dalam Bahasa Indonesia yang jelas dan profesional.\n\n"
+            + chat_history
         )
 
-        reply = completion.choices[0].message.content
+        response = model.generate_content(full_prompt)
+        reply = response.text
 
     st.session_state.messages.append({"role": "assistant", "content": reply})
     st.markdown(f"<div class='chat-bubble bot'>{reply}</div>", unsafe_allow_html=True)
