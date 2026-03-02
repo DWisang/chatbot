@@ -33,12 +33,16 @@ else:
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        response = client.chat_completion(
-            messages=st.session_state.messages,
-            max_tokens=300,
-        )
+       prompt_text = ""
+for m in st.session_state.messages:
+    prompt_text += f"{m['role']}: {m['content']}\n"
 
-        reply = response.choices[0].message.content
+response = client.text_generation(
+    prompt_text,
+    max_new_tokens=300,
+)
+
+reply = response
 
         with st.chat_message("assistant"):
             st.markdown(reply)
