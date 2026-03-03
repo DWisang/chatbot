@@ -3,6 +3,7 @@ from openai import OpenAI
 import json
 import re
 import base64
+from datetime import datetime
 
 # ==============================
 # CONFIG
@@ -33,7 +34,7 @@ def get_base64_image(path):
 logo_base64 = get_base64_image("logo.png")
 
 # ==============================
-# LOAD TEACHERS
+# LOAD DATA
 # ==============================
 try:
     with open("teachers.json", "r", encoding="utf-8") as f:
@@ -42,9 +43,6 @@ try:
 except:
     teachers = []
 
-# ==============================
-# LOAD OSIS
-# ==============================
 try:
     with open("osis.json", "r", encoding="utf-8") as f:
         raw_osis = json.load(f)
@@ -52,18 +50,21 @@ try:
 except:
     osis = {}
 
+try:
+    with open("school_profile.json", "r", encoding="utf-8") as f:
+        school = json.load(f)
+except:
+    school = {}
+
 # ==============================
 # STYLE
 # ==============================
 st.markdown(f"""
 <style>
 header {{visibility:hidden;}}
-
 .fixed-header {{
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
+    top: 0; left: 0; right: 0;
     background: white;
     padding: 15px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
@@ -73,33 +74,22 @@ header {{visibility:hidden;}}
     gap: 15px;
     z-index: 999;
 }}
-
 .header-logo {{ width: 55px; }}
-
-.header-text {{
-    display: flex;
-    flex-direction: column;
-}}
-
+.header-text {{ display: flex; flex-direction: column; }}
 .header-title {{ font-size: 20px; font-weight: 600; }}
 .header-sub {{ font-size: 13px; color: gray; }}
-
 .spacer {{ height: 110px; }}
-
 .chat-row {{ display: flex; margin-bottom: 15px; }}
 .user {{ justify-content: flex-end; }}
 .bot {{ justify-content: flex-start; }}
-
 .bubble {{
     padding: 12px 16px;
     border-radius: 18px;
     max-width: 70%;
     font-size: 14px;
 }}
-
 .user-bubble {{ background: #2563eb; color: white; }}
 .bot-bubble {{ background: #f1f5f9; color: black; }}
-
 .logo {{ width: 38px; margin-right: 10px; }}
 </style>
 
@@ -110,7 +100,6 @@ header {{visibility:hidden;}}
         <div class="header-sub">Chatbot AI Resmi Sekolah</div>
     </div>
 </div>
-
 <div class="spacer"></div>
 """, unsafe_allow_html=True)
 
@@ -151,13 +140,6 @@ def find_teacher_by_subject(prompt):
     prompt = normalize(prompt)
     results = []
 
-    # STEP 1: exact match
-    for t in teachers:
-        for m in t.get("mapel", []):
-            if normalize(m) == prompt:
-                return [t]
-
-    # STEP 2: specific keyword (islam, kristen, tl, dll)
     specific_keywords = ["islam", "kristen", "katolik", "buddha", "tl"]
 
     for keyword in specific_keywords:
@@ -169,7 +151,6 @@ def find_teacher_by_subject(prompt):
                         break
             return remove_duplicates(results)
 
-    # STEP 3: general match
     for t in teachers:
         for m in t.get("mapel", []):
             subject = normalize(m)
@@ -181,7 +162,7 @@ def find_teacher_by_subject(prompt):
     return remove_duplicates(results)
 
 # ==============================
-# OSIS SMART MATCH
+# OSIS
 # ==============================
 def find_osis_query(prompt):
     prompt = normalize(prompt)
@@ -191,27 +172,10 @@ def find_osis_query(prompt):
         jab_text = jab.replace("_", " ")
         jab_words = jab_text.split()
 
-        if all(word in prompt for word in jab_words):
-            return f"{jab_text.title()} adalah {data.get('nama')} ({data.get('kelas')}).", None
-
         if any(word in prompt for word in jab_words):
-            return f"{jab_text.title()} adalah {data.get('nama')} ({data.get('kelas')}).", None
+            return f"{jab_text.title()} adalah {data.get('nama')} ({data.get('kelas')})."
 
-    for s in osis.get("seksi", []):
-        nama_seksi = normalize(s.get("nama_seksi", ""))
-        seksi_words = nama_seksi.split()
-
-        if "anggota" in prompt and any(word in prompt for word in seksi_words):
-            text = f"Anggota Seksi {s.get('nama_seksi')}:<br>"
-            for a in s.get("anggota", []):
-                text += f"• {a.get('nama')} ({a.get('kelas')})<br>"
-            return text, None
-
-        if any(word in prompt for word in seksi_words):
-            ketua = s.get("ketua", {})
-            return f"Ketua Seksi {s.get('nama_seksi')} adalah {ketua.get('nama')} ({ketua.get('kelas')}).", None
-
-    return None, None
+    return None
 
 # ==============================
 # SESSION
@@ -233,17 +197,44 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     render_user(prompt)
 
-    clean_prompt = normalize(prompt)
+    clean = normalize(prompt)
     reply = None
 
-    # LIST GURU
-    if "daftar guru" in clean_prompt:
-        text = "<b>Daftar Guru:</b><br><br>"
-        for t in teachers:
-            text += f"• {t.get('nama')}<br>"
-        reply = text
+    identitas = school.get("identitas", {})
+    alamat = school.get("alamat", {})
+    statistik = school.get("statistik", {})
+    legalitas = school.get("legalitas", {})
 
-    # MAPEL
+    # SCHOOL INFO
+    if "alamat" in clean:
+        reply = f"Alamat sekolah berada di {alamat.get('jalan')}, Kecamatan {alamat.get('kecamatan')}, Kabupaten {alamat.get('kabupaten')}, Provinsi {alamat.get('provinsi')}."
+
+    elif "npsn" in clean:
+        reply = f"NPSN {identitas.get('nama_sekolah')} adalah {identitas.get('npsn')}."
+
+    elif "status" in clean:
+        reply = f"Status sekolah adalah {identitas.get('status')}."
+
+    elif "jumlah siswa" in clean:
+        reply = f"Jumlah total siswa adalah {statistik.get('jumlah_siswa_total')} siswa."
+
+    elif "kelas 10" in clean:
+        reply = f"Jumlah siswa kelas 10 adalah {statistik.get('per_tingkat', {}).get('kelas_10')} siswa."
+
+    elif "kelas 11" in clean:
+        reply = f"Jumlah siswa kelas 11 adalah {statistik.get('per_tingkat', {}).get('kelas_11')} siswa."
+
+    elif "kelas 12" in clean:
+        reply = f"Jumlah siswa kelas 12 adalah {statistik.get('per_tingkat', {}).get('kelas_12')} siswa."
+
+    elif "berdiri" in clean or "tahun berdiri" in clean:
+        tanggal = legalitas.get("sk_pendirian", {}).get("tanggal")
+        if tanggal:
+            tahun = datetime.strptime(tanggal, "%Y-%m-%d").year
+            umur = datetime.now().year - tahun
+            reply = f"Sekolah berdiri pada tahun {tahun} dan saat ini berusia {umur} tahun."
+
+    # GURU
     if reply is None:
         subject_matches = find_teacher_by_subject(prompt)
         if subject_matches:
@@ -252,24 +243,9 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
                 text += f"• {t.get('nama')}<br>"
             reply = text
 
-    # WAKA
-    if reply is None and "waka" in clean_prompt:
-        text = "<b>Daftar Wakil Kepala Sekolah:</b><br><br>"
-        for t in teachers:
-            if t.get("jabatan") and "waka" in t.get("jabatan","").lower():
-                text += f"• {t.get('jabatan')} - {t.get('nama')}<br>"
-        reply = text
-
     # OSIS
-    if reply is None and osis:
-        reply, _ = find_osis_query(prompt)
-
-    # OSIS FULL
-    if reply is None and "osis" in clean_prompt:
-        text = f"<b>Struktur OSIS Periode {osis.get('periode')}</b><br><br>"
-        for jab, data in osis.get("inti", {}).items():
-            text += f"• {jab.replace('_',' ').title()}: {data.get('nama')} ({data.get('kelas')})<br>"
-        reply = text
+    if reply is None:
+        reply = find_osis_query(prompt)
 
     # AI FALLBACK
     if reply is None:
