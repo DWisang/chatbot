@@ -176,11 +176,16 @@ def render_bot(msg):
 def find_teacher_by_subject(prompt):
     prompt = normalize(prompt)
     results = []
+
     for t in teachers:
         for m in t.get("mapel", []):
-            if normalize(m) in prompt:
+            subject_words = normalize(m).split()
+
+            # Jika salah satu kata subject ada di prompt
+            if any(word in prompt for word in subject_words):
                 results.append(t)
                 break
+
     return results
 
 def find_osis_query(prompt):
