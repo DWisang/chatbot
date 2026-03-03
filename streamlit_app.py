@@ -34,7 +34,7 @@ teachers = data["guru"]
 def normalize(text):
     text = text.lower()
     text = re.sub(r"[^\w\s]", " ", text)
-    return text
+    return text.strip()
 
 def find_teacher_by_name(prompt):
     for teacher in teachers:
@@ -45,19 +45,25 @@ def find_teacher_by_name(prompt):
                 return teacher
     return None
 
-def find_teacher_by_subject(prompt):
-    results = []
-    for teacher in teachers:
-        for subject in teacher["mapel"]:
-            if subject.lower() in prompt:
-                results.append(teacher)
-    return results
-
 def find_by_jabatan(prompt):
     for teacher in teachers:
-        if teacher["jabatan"] and teacher["jabatan"].lower() in prompt:
-            return teacher
+        if teacher["jabatan"]:
+            if teacher["jabatan"].lower() in prompt:
+                return teacher
     return None
+
+# 🔥 FIXED SUBJECT MATCHING (NO DOUBLE)
+def find_teacher_by_subject(prompt):
+    matches = []
+
+    for teacher in teachers:
+        for subject in teacher["mapel"]:
+            pattern = r"\b" + re.escape(subject.lower()) + r"\b"
+            if re.search(pattern, prompt):
+                matches.append(teacher)
+                break  # stop double match inside same teacher
+
+    return matches
 
 # ==============================
 # LOAD LOGO
@@ -158,7 +164,7 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
     reply = None
 
     # ==============================
-    # RULE: FUN
+    # FUN RULE
     # ==============================
     if "guru" in clean_prompt and "ganteng" in clean_prompt:
         reply = "Guru paling ganteng adalah Pak Dhimas 😎"
@@ -181,7 +187,7 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
             reply = f"{teacher_match['nama']}{jabatan} mengampu: {', '.join(teacher_match['mapel'])}."
 
     # ==============================
-    # CEK MAPEL
+    # CEK MAPEL (FIXED)
     # ==============================
     if reply is None:
         subject_matches = find_teacher_by_subject(clean_prompt)
