@@ -1,0 +1,70 @@
+{
+  "periode": "2025/2026",
+  "pembina": {
+    "nama": "Nama Pembina OSIS",
+    "foto": "assets/osis/pembina.jpg"
+  },
+  "inti": [
+    {
+      "jabatan": "Ketua OSIS",
+      "nama": "Nama Ketua",
+      "foto": "assets/osis/ketua.jpg"
+    },
+    {
+      "jabatan": "Wakil Ketua OSIS",
+      "nama": "Nama Wakil",
+      "foto": "assets/osis/wakil.jpg"
+    },
+    {
+      "jabatan": "Sekretaris",
+      "nama": "Nama Sekretaris",
+      "foto": "assets/osis/sekretaris.jpg"
+    },
+    {
+      "jabatan": "Bendahara",
+      "nama": "Nama Bendahara",
+      "foto": "assets/osis/bendahara.jpg"
+    }
+  ],
+  "seksi": [
+    {
+      "nama_seksi": "Seksi Perlengkapan",
+      "ketua": "Nama Ketua Seksi",
+      "anggota": [
+        "Anggota 1",
+        "Anggota 2"
+      ],
+      "foto": "assets/osis/perlengkapan.jpg"
+    },
+    {
+      "nama_seksi": "Seksi Keagamaan",
+      "ketua": "Nama Ketua Seksi",
+      "anggota": [
+        "Anggota 1",
+        "Anggota 2"
+      ],
+      "foto": "assets/osis/keagamaan.jpg"
+    },
+    {
+      "nama_seksi": "Seksi Olahraga",
+      "ketua": "Nama Ketua Seksi",
+      "anggota": [
+        "Anggota 1",
+        "Anggota 2"
+      ],
+      "foto": "assets/osis/olahraga.jpg"
+    }
+  ],
+  "media_sosial": {
+    "instagram": "@osis_sman1",
+    "youtube": "OSIS SMAN 1"
+  },
+  "visi_misi": {
+    "visi": "Menjadikan OSIS sebagai wadah pengembangan karakter dan kepemimpinan siswa.",
+    "misi": [
+      "Meningkatkan partisipasi siswa dalam kegiatan sekolah.",
+      "Membangun budaya disiplin dan tanggung jawab.",
+      "Mengembangkan kreativitas dan inovasi siswa."
+    ]
+  }
+}
