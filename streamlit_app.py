@@ -258,18 +258,17 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
 
     inti = osis.get("inti", {})
 
-    # mapping fleksibel
     jabatan_mapping = {
         "ketua osis": "ketua_umum",
         "ketua umum": "ketua_umum",
         "wakil ketua": "wakil_ketua",
         "ketua harian": "ketua_harian",
-        "sekretaris": "sekretaris_umum",
         "sekretaris umum": "sekretaris_umum",
+        "sekretaris": "sekretaris_umum",
         "wakil sekretaris": "wakil_sekretaris",
-        "bendahara": "bendahara_umum",
         "bendahara osis": "bendahara_umum",
         "bendahara umum": "bendahara_umum",
+        "bendahara": "bendahara_umum",
         "wakil bendahara": "wakil_bendahara",
     }
 
@@ -285,7 +284,7 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
 
     # ==== CEK SEKSI ====
     for s in osis.get("seksi", []):
-        nama_seksi = normalize(s.get("nama_seksi",""))
+        nama_seksi = normalize(s.get("nama_seksi", ""))
 
         if any(word in prompt for word in nama_seksi.split()):
             ketua = s.get("ketua", {})
@@ -295,7 +294,7 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
             return f"Ketua Seksi {s.get('nama_seksi')} adalah {nama} ({kelas}).", photo
 
     return None, None
-
+       
     # OSIS FULL
     if reply is None and "osis" in clean_prompt:
         text = f"<b>Struktur OSIS Periode {osis.get('periode')}</b><br><br>"
