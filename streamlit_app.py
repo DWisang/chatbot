@@ -253,8 +253,48 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
         reply = text
 
     # OSIS SPECIFIC
-    if reply is None and osis:
-        reply, photo = find_osis_query(prompt)
+   def find_osis_query(prompt):
+    prompt = normalize(prompt)
+
+    inti = osis.get("inti", {})
+
+    # mapping fleksibel
+    jabatan_mapping = {
+        "ketua osis": "ketua_umum",
+        "ketua umum": "ketua_umum",
+        "wakil ketua": "wakil_ketua",
+        "ketua harian": "ketua_harian",
+        "sekretaris": "sekretaris_umum",
+        "sekretaris umum": "sekretaris_umum",
+        "wakil sekretaris": "wakil_sekretaris",
+        "bendahara": "bendahara_umum",
+        "bendahara osis": "bendahara_umum",
+        "bendahara umum": "bendahara_umum",
+        "wakil bendahara": "wakil_bendahara",
+    }
+
+    # ==== CEK INTI ====
+    for key, value in jabatan_mapping.items():
+        if key in prompt:
+            data = inti.get(value)
+            if data:
+                nama = data.get("nama")
+                kelas = data.get("kelas")
+                photo = get_osis_photo(nama)
+                return f"{key.title()} adalah {nama} ({kelas}).", photo
+
+    # ==== CEK SEKSI ====
+    for s in osis.get("seksi", []):
+        nama_seksi = normalize(s.get("nama_seksi",""))
+
+        if any(word in prompt for word in nama_seksi.split()):
+            ketua = s.get("ketua", {})
+            nama = ketua.get("nama")
+            kelas = ketua.get("kelas")
+            photo = get_osis_photo(nama)
+            return f"Ketua Seksi {s.get('nama_seksi')} adalah {nama} ({kelas}).", photo
+
+    return None, None
 
     # OSIS FULL
     if reply is None and "osis" in clean_prompt:
