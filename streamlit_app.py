@@ -48,7 +48,13 @@ try:
 except:
     school_data = {}
 
-osis = school_data.get("osis", {})
+# LOAD OSIS TERPISAH
+try:
+    with open("osis.json", "r", encoding="utf-8") as f:
+        osis_data = json.load(f)
+        osis = osis_data.get("osis", osis_data)
+except:
+    osis = {}
 
 # ==============================
 # STYLE + FIXED HEADER
@@ -193,12 +199,7 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
         if teachers:
             text = "<b>Daftar Guru:</b><br><br>"
             for t in teachers:
-                nama = t.get("nama", "-")
-                jabatan = t.get("jabatan", "")
-                if jabatan:
-                    text += f"• {nama} ({jabatan})<br>"
-                else:
-                    text += f"• {nama}<br>"
+                text += f"• {t.get('nama')} ({t.get('jabatan','')})<br>"
             reply = text
         else:
             reply = "Data guru tidak ditemukan."
@@ -214,9 +215,10 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
             or "wakil kepala" in t.get("jabatan","").lower()
         ]
         if waka_list:
-            reply = "<b>Daftar Wakil Kepala Sekolah:</b><br><br>"
+            text = "<b>Daftar Wakil Kepala Sekolah:</b><br><br>"
             for w in waka_list:
-                reply += f"• {w}<br>"
+                text += f"• {w}<br>"
+            reply = text
         else:
             reply = "Data Wakil Kepala Sekolah tidak ditemukan."
 
@@ -247,7 +249,7 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
         reply = text
 
     # ==========================
-    # STREAMING AI (NO ANIMATION)
+    # AI FALLBACK (NO ANIMATION)
     # ==========================
     if reply is None:
         full_reply = ""
