@@ -33,31 +33,35 @@ def get_base64_image(path):
 logo_base64 = get_base64_image("logo.png")
 
 # ==============================
-# LOAD DATA
+# LOAD TEACHERS
 # ==============================
 try:
     with open("teachers.json", "r", encoding="utf-8") as f:
-        teachers_data = json.load(f)
-        teachers = teachers_data.get("guru", teachers_data)
+        raw = json.load(f)
+        if isinstance(raw, dict) and "guru" in raw:
+            teachers = raw["guru"]
+        elif isinstance(raw, list):
+            teachers = raw
+        else:
+            teachers = []
 except:
     teachers = []
 
-try:
-    with open("school_profile.json", "r", encoding="utf-8") as f:
-        school_data = json.load(f)
-except:
-    school_data = {}
-
-# LOAD OSIS TERPISAH
+# ==============================
+# LOAD OSIS
+# ==============================
 try:
     with open("osis.json", "r", encoding="utf-8") as f:
-        osis_data = json.load(f)
-        osis = osis_data.get("osis", osis_data)
+        raw_osis = json.load(f)
+        if isinstance(raw_osis, dict) and "osis" in raw_osis:
+            osis = raw_osis["osis"]
+        else:
+            osis = raw_osis
 except:
     osis = {}
 
 # ==============================
-# STYLE + FIXED HEADER
+# STYLE
 # ==============================
 st.markdown(f"""
 <style>
@@ -169,6 +173,51 @@ def render_bot(msg):
     </div>
     """, unsafe_allow_html=True)
 
+def find_teacher_by_subject(prompt):
+    prompt = normalize(prompt)
+    results = []
+    for t in teachers:
+        for m in t.get("mapel", []):
+            if normalize(m) in prompt:
+                results.append(t)
+                break
+    return results
+
+def find_osis_query(prompt):
+    prompt = normalize(prompt)
+
+    # ==== INTI ====
+    inti = osis.get("inti", {})
+    for jab, data in inti.items():
+        jab_text = jab.replace("_", " ")
+        if jab_text in prompt:
+            return f"{jab_text.title()} adalah {data.get('nama')} ({data.get('kelas')})."
+
+    # ==== SEKSI ====
+    seksi_list = osis.get("seksi", [])
+    for s in seksi_list:
+        nama_seksi = normalize(s.get("nama_seksi",""))
+
+        # tanya ketua seksi
+        if "ketua" in prompt and any(word in prompt for word in nama_seksi.split()):
+            ketua = s.get("ketua", {})
+            return f"Ketua Seksi {s.get('nama_seksi')} adalah {ketua.get('nama')} ({ketua.get('kelas')})."
+
+        # tanya anggota seksi
+        if "anggota" in prompt and any(word in prompt for word in nama_seksi.split()):
+            anggota = s.get("anggota", [])
+            text = f"Anggota Seksi {s.get('nama_seksi')}:<br>"
+            for a in anggota:
+                text += f"• {a.get('nama')} ({a.get('kelas')})<br>"
+            return text
+
+        # tanya seksi umum
+        if any(word in prompt for word in nama_seksi.split()):
+            ketua = s.get("ketua", {})
+            return f"Ketua Seksi {s.get('nama_seksi')} adalah {ketua.get('nama')} ({ketua.get('kelas')})."
+
+    return None
+
 # ==============================
 # SESSION
 # ==============================
@@ -192,82 +241,54 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
     clean_prompt = normalize(prompt)
     reply = None
 
-    # ==========================
     # LIST GURU
-    # ==========================
-    if any(k in clean_prompt for k in ["daftar guru", "list guru", "semua guru"]):
-        if teachers:
-            text = "<b>Daftar Guru:</b><br><br>"
-            for t in teachers:
-                text += f"• {t.get('nama')} ({t.get('jabatan','')})<br>"
-            reply = text
-        else:
-            reply = "Data guru tidak ditemukan."
-
-    # ==========================
-    # LIST WAKA
-    # ==========================
-    elif any(k in clean_prompt for k in ["waka", "wakil kepala"]):
-        waka_list = [
-            f"{t.get('jabatan')} - {t.get('nama')}"
-            for t in teachers
-            if "waka" in t.get("jabatan","").lower()
-            or "wakil kepala" in t.get("jabatan","").lower()
-        ]
-        if waka_list:
-            text = "<b>Daftar Wakil Kepala Sekolah:</b><br><br>"
-            for w in waka_list:
-                text += f"• {w}<br>"
-            reply = text
-        else:
-            reply = "Data Wakil Kepala Sekolah tidak ditemukan."
-
-    # ==========================
-    # OSIS
-    # ==========================
-    elif "osis" in clean_prompt and osis:
-
-        periode = osis.get("periode", "-")
-        inti = osis.get("inti", {})
-        seksi = osis.get("seksi", [])
-
-        text = f"<b>Struktur OSIS Periode {periode}</b><br><br>"
-        text += "<b>Pengurus Inti:</b><br>"
-
-        for jab, data in inti.items():
-            text += f"• {jab.replace('_',' ').title()}: {data.get('nama')} ({data.get('kelas')})<br>"
-
-        text += "<br><b>Seksi Bidang:</b><br>"
-
-        for s in seksi:
-            text += f"<br><b>{s.get('nama_seksi')}</b><br>"
-            text += f"• Ketua: {s.get('ketua',{}).get('nama')} ({s.get('ketua',{}).get('kelas')})<br>"
-
-            for a in s.get("anggota", []):
-                text += f"&nbsp;&nbsp;&nbsp;• {a.get('nama')} ({a.get('kelas')})<br>"
-
+    if any(k in clean_prompt for k in ["daftar guru", "list guru"]):
+        text = "<b>Daftar Guru:</b><br><br>"
+        for t in teachers:
+            text += f"• {t.get('nama')}<br>"
         reply = text
 
-    # ==========================
-    # AI FALLBACK (NO ANIMATION)
-    # ==========================
+    # MAPEL
     if reply is None:
-        full_reply = ""
-        stream = client.chat.completions.create(
+        subject_matches = find_teacher_by_subject(prompt)
+        if subject_matches:
+            text = "<b>Guru Pengampu:</b><br><br>"
+            for t in subject_matches:
+                text += f"• {t.get('nama')}<br>"
+            reply = text
+
+    # WAKA
+    if reply is None and "waka" in clean_prompt:
+        text = "<b>Daftar Wakil Kepala Sekolah:</b><br><br>"
+        for t in teachers:
+            if t.get("jabatan") and "waka" in t.get("jabatan","").lower():
+                text += f"• {t.get('jabatan')} - {t.get('nama')}<br>"
+        reply = text
+
+    # OSIS SPECIFIC
+    if reply is None and osis:
+        osis_result = find_osis_query(prompt)
+        if osis_result:
+            reply = osis_result
+
+    # OSIS FULL
+    if reply is None and "osis" in clean_prompt:
+        text = f"<b>Struktur OSIS Periode {osis.get('periode')}</b><br><br>"
+        for jab, data in osis.get("inti", {}).items():
+            text += f"• {jab.replace('_',' ').title()}: {data.get('nama')} ({data.get('kelas')})<br>"
+        reply = text
+
+    # AI FALLBACK
+    if reply is None:
+        completion = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
                 {"role": "system", "content": "Anda adalah Chatbot Resmi SMAN 1 TUNJUNGAN."},
                 {"role": "user", "content": prompt}
             ],
-            stream=True,
             temperature=0.2,
         )
-
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                full_reply += chunk.choices[0].delta.content
-
-        reply = full_reply
+        reply = completion.choices[0].message.content
 
     render_bot(reply)
     st.session_state.messages.append({"role": "assistant", "content": reply})
