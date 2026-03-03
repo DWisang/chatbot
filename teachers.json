@@ -14,7 +14,7 @@
     },
     {
       "nama": "Dra. Nurlaela Atmaningtri",
-      "alias": [laela],
+      "alias": ["laela"],
       "mapel": [
         "Ekonomi TL",
         "PKWU"
@@ -56,7 +56,7 @@
     },
     {
       "nama": "Sumartini",
-      "alias": [martini],
+      "alias": ["martini"],
       "mapel": [
         "Seni Budaya"
       ],
@@ -86,7 +86,7 @@
     },
     {
       "nama": "Dra. Theresia Mulyorini",
-      "alias": [Tere],
+      "alias": ["Tere"],
       "mapel": [
         "Bahasa Inggris",
         "Bahasa Inggris TL"
@@ -108,7 +108,7 @@
     },
     {
       "nama": "Watiningsih",
-      "alias": [Wati],
+      "alias": ["Wati"],
       "mapel": [
         "Matematika TL"
       ],
@@ -128,7 +128,7 @@
     },
     {
       "nama": "Suhartini",
-      "alias": [har, hartini],
+      "alias": ["har", "hartini"],
       "mapel": [
         "Bahasa Indonesia"
       ],
@@ -138,7 +138,7 @@
     },
     {
       "nama": "Dra. Sri Astutik",
-      "alias": [tutik],
+      "alias": ["tutik"],
       "mapel": [
         "Bahasa Indonesia"
       ],
@@ -148,7 +148,7 @@
     },
     {
       "nama": "Hari Setyawati",
-      "alias": [eri],
+      "alias": ["eri"],
       "mapel": [
         "Ekonomi",
         "PKWU"
@@ -159,7 +159,7 @@
     },
     {
       "nama": "Sunarni",
-      "alias": [narni],
+      "alias": ["narni"],
       "mapel": [
         "Matematika",
         "Matematika TL"
@@ -170,7 +170,7 @@
     },
     {
       "nama": "Muhammad Ainur Rofiq",
-      "alias": [totok],
+      "alias": ["totok"],
       "mapel": [
         "Sejarah Indonesia",
         "Sejarah TL"
@@ -202,7 +202,7 @@
     },
     {
       "nama": "Sulastriyani",
-      "alias": [lastri],
+      "alias": ["lastri"],
       "mapel": [
         "Sejarah Indonesia",
         "Sejarah TL"
@@ -243,7 +243,7 @@
     },
     {
       "nama": "Zainal Arifin",
-      "alias": [uzay],
+      "alias": ["uzay"],
       "mapel": [
         "Pendidikan Agama Islam"
       ],
@@ -263,7 +263,7 @@
     },
     {
       "nama": "Rahayu Indrayati",
-      "alias": [iin],
+      "alias": ["iin"],
       "mapel": [
         "PJOK"
       ],
@@ -304,7 +304,7 @@
     },
     {
       "nama": "Ayudhia Sari Rahmadani",
-      "alias": [ayu],
+      "alias": ["ayu"],
       "mapel": [
         "Bahasa Indonesia"
       ],
@@ -314,7 +314,7 @@
     },
     {
       "nama": "Syarifuddin Ahmad",
-      "alias": [syarif],
+      "alias": ["syarif"],
       "mapel": [
         "Bahasa Indonesia"
       ],
@@ -408,7 +408,7 @@
     },
     {
       "nama": "Haniffuddin",
-      "alias": [hanif],
+      "alias": ["hanif"],
       "mapel": [
         "Sosiologi",
         "Sosiologi TL"
@@ -429,7 +429,7 @@
     },
     {
       "nama": "Anik Setyarini",
-      "alias": [anik gemoy],
+      "alias": ["anik gemoy"],
       "mapel": [
         "Pendidikan Pancasila"
       ],
@@ -480,7 +480,7 @@
     },
     {
       "nama": "Lailly Oktavianingrum",
-      "alias": [bulel],
+      "alias": ["bulel"],
       "mapel": [
         "Kimia TL"
       ],
@@ -490,7 +490,7 @@
     },
     {
       "nama": "Sri Purwati",
-      "alias": [pur],
+      "alias": ["pur"],
       "mapel": [
         "Matematika"
       ],
@@ -552,7 +552,7 @@
     },
     {
       "nama": "Ahmad Ni'am",
-      "alias": [niam],
+      "alias": ["niam"],
       "mapel": [
         "Pendidikan Agama Islam"
       ],
@@ -637,7 +637,7 @@
     },
     {
       "nama": "Sri Rusmini",
-      "alias": [rus],
+      "alias": ["rus"],
       "mapel": [
         "Agama Kristen"
       ],
@@ -657,7 +657,7 @@
     },
     {
       "nama": "Sukemi",
-      "alias": [kemi],
+      "alias": ["kemi"],
       "mapel": [
         "Pendidikan Agama Islam"
       ],
