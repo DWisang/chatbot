@@ -45,8 +45,8 @@ except:
 
 try:
     with open("osis.json", "r", encoding="utf-8") as f:
-        raw_osis = json.load(f)
-        osis = raw_osis["osis"] if "osis" in raw_osis else raw_osis
+        raw = json.load(f)
+        osis = raw["osis"] if "osis" in raw else raw
 except:
     osis = {}
 
@@ -162,7 +162,7 @@ def find_teacher_by_subject(prompt):
     return remove_duplicates(results)
 
 # ==============================
-# OSIS
+# OSIS SMART MATCH
 # ==============================
 def find_osis_query(prompt):
     prompt = normalize(prompt)
@@ -170,10 +170,21 @@ def find_osis_query(prompt):
 
     for jab, data in inti.items():
         jab_text = jab.replace("_", " ")
-        jab_words = jab_text.split()
-
-        if any(word in prompt for word in jab_words):
+        if any(word in prompt for word in jab_text.split()):
             return f"{jab_text.title()} adalah {data.get('nama')} ({data.get('kelas')})."
+
+    for s in osis.get("seksi", []):
+        nama_seksi = normalize(s.get("nama_seksi", ""))
+
+        if "anggota" in prompt and any(word in prompt for word in nama_seksi.split()):
+            text = f"Anggota Seksi {s.get('nama_seksi')}:<br>"
+            for a in s.get("anggota", []):
+                text += f"• {a.get('nama')} ({a.get('kelas')})<br>"
+            return text
+
+        if any(word in prompt for word in nama_seksi.split()):
+            ketua = s.get("ketua", {})
+            return f"Ketua Seksi {s.get('nama_seksi')} adalah {ketua.get('nama')} ({ketua.get('kelas')})."
 
     return None
 
@@ -205,15 +216,14 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
     statistik = school.get("statistik", {})
     legalitas = school.get("legalitas", {})
 
+    # ==========================
     # SCHOOL INFO
+    # ==========================
     if "alamat" in clean:
         reply = f"Alamat sekolah berada di {alamat.get('jalan')}, Kecamatan {alamat.get('kecamatan')}, Kabupaten {alamat.get('kabupaten')}, Provinsi {alamat.get('provinsi')}."
 
     elif "npsn" in clean:
-        reply = f"NPSN {identitas.get('nama_sekolah')} adalah {identitas.get('npsn')}."
-
-    elif "status" in clean:
-        reply = f"Status sekolah adalah {identitas.get('status')}."
+        reply = f"NPSN adalah {identitas.get('npsn')}."
 
     elif "jumlah siswa" in clean:
         reply = f"Jumlah total siswa adalah {statistik.get('jumlah_siswa_total')} siswa."
@@ -227,14 +237,35 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
     elif "kelas 12" in clean:
         reply = f"Jumlah siswa kelas 12 adalah {statistik.get('per_tingkat', {}).get('kelas_12')} siswa."
 
-    elif "berdiri" in clean or "tahun berdiri" in clean:
+    elif "berdiri" in clean:
         tanggal = legalitas.get("sk_pendirian", {}).get("tanggal")
         if tanggal:
             tahun = datetime.strptime(tanggal, "%Y-%m-%d").year
             umur = datetime.now().year - tahun
             reply = f"Sekolah berdiri pada tahun {tahun} dan saat ini berusia {umur} tahun."
 
-    # GURU
+    # ==========================
+    # LIST GURU
+    # ==========================
+    if reply is None and "daftar guru" in clean:
+        text = "<b>Daftar Guru:</b><br><br>"
+        for t in teachers:
+            text += f"• {t.get('nama')}<br>"
+        reply = text
+
+    # ==========================
+    # WAKA
+    # ==========================
+    if reply is None and "waka" in clean:
+        text = "<b>Daftar Wakil Kepala Sekolah:</b><br><br>"
+        for t in teachers:
+            if t.get("jabatan") and "waka" in t.get("jabatan","").lower():
+                text += f"• {t.get('jabatan')} - {t.get('nama')}<br>"
+        reply = text
+
+    # ==========================
+    # MAPEL
+    # ==========================
     if reply is None:
         subject_matches = find_teacher_by_subject(prompt)
         if subject_matches:
@@ -243,11 +274,15 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
                 text += f"• {t.get('nama')}<br>"
             reply = text
 
+    # ==========================
     # OSIS
+    # ==========================
     if reply is None:
         reply = find_osis_query(prompt)
 
+    # ==========================
     # AI FALLBACK
+    # ==========================
     if reply is None:
         completion = client.chat.completions.create(
             model=MODEL_NAME,
