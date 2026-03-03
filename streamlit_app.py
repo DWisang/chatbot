@@ -3,6 +3,7 @@ from openai import OpenAI
 import json
 import re
 import base64
+import os
 
 # ==============================
 # CONFIG
@@ -38,12 +39,7 @@ logo_base64 = get_base64_image("logo.png")
 try:
     with open("teachers.json", "r", encoding="utf-8") as f:
         raw = json.load(f)
-        if isinstance(raw, dict) and "guru" in raw:
-            teachers = raw["guru"]
-        elif isinstance(raw, list):
-            teachers = raw
-        else:
-            teachers = []
+        teachers = raw["guru"] if "guru" in raw else raw
 except:
     teachers = []
 
@@ -53,10 +49,7 @@ except:
 try:
     with open("osis.json", "r", encoding="utf-8") as f:
         raw_osis = json.load(f)
-        if isinstance(raw_osis, dict) and "osis" in raw_osis:
-            osis = raw_osis["osis"]
-        else:
-            osis = raw_osis
+        osis = raw_osis["osis"] if "osis" in raw_osis else raw_osis
 except:
     osis = {}
 
@@ -82,41 +75,21 @@ header {{visibility:hidden;}}
     z-index: 999;
 }}
 
-.header-logo {{
-    width: 55px;
-}}
+.header-logo {{ width: 55px; }}
 
 .header-text {{
     display: flex;
     flex-direction: column;
 }}
 
-.header-title {{
-    font-size: 20px;
-    font-weight: 600;
-}}
+.header-title {{ font-size: 20px; font-weight: 600; }}
+.header-sub {{ font-size: 13px; color: gray; }}
 
-.header-sub {{
-    font-size: 13px;
-    color: gray;
-}}
+.spacer {{ height: 110px; }}
 
-.spacer {{
-    height: 110px;
-}}
-
-.chat-row {{
-    display: flex;
-    margin-bottom: 15px;
-}}
-
-.user {{
-    justify-content: flex-end;
-}}
-
-.bot {{
-    justify-content: flex-start;
-}}
+.chat-row {{ display: flex; margin-bottom: 15px; }}
+.user {{ justify-content: flex-end; }}
+.bot {{ justify-content: flex-start; }}
 
 .bubble {{
     padding: 12px 16px;
@@ -125,20 +98,10 @@ header {{visibility:hidden;}}
     font-size: 14px;
 }}
 
-.user-bubble {{
-    background: #2563eb;
-    color: white;
-}}
+.user-bubble {{ background: #2563eb; color: white; }}
+.bot-bubble {{ background: #f1f5f9; color: black; }}
 
-.bot-bubble {{
-    background: #f1f5f9;
-    color: black;
-}}
-
-.logo {{
-    width: 38px;
-    margin-right: 10px;
-}}
+.logo {{ width: 38px; margin-right: 10px; }}
 </style>
 
 <div class="fixed-header">
@@ -165,7 +128,7 @@ def render_user(msg):
     </div>
     """, unsafe_allow_html=True)
 
-def render_bot(msg):
+def render_bot(msg, image_path=None):
     st.markdown(f"""
     <div class="chat-row bot">
         <img src="data:image/png;base64,{logo_base64}" class="logo">
@@ -173,11 +136,18 @@ def render_bot(msg):
     </div>
     """, unsafe_allow_html=True)
 
+    if image_path and os.path.exists(image_path):
+        st.image(image_path, width=200)
+
+def get_osis_photo(nama):
+    filename = normalize(nama) + ".jpg"
+    path = os.path.join("osis", filename)
+    return path if os.path.exists(path) else None
+
 def find_teacher_by_subject(prompt):
     prompt = normalize(prompt)
     results = []
 
-    # keyword khusus agama
     agama_keywords = {
         "islam": "pendidikan agama islam",
         "kristen": "agama kristen",
@@ -189,59 +159,50 @@ def find_teacher_by_subject(prompt):
         for m in t.get("mapel", []):
             subject = normalize(m)
 
-            # ====== PRIORITAS 1: Exact full subject ======
             if subject in prompt:
                 results.append(t)
                 break
 
-            # ====== PRIORITAS 2: AGAMA SPESIFIK ======
-            for key, full_subject in agama_keywords.items():
-                if key in prompt and full_subject in subject:
+            for key, full in agama_keywords.items():
+                if key in prompt and full in subject:
                     results.append(t)
                     break
 
-            # ====== PRIORITAS 3: Kata umum (match per kata) ======
-            subject_words = subject.split()
-            if any(word in prompt for word in subject_words):
+            if any(word in prompt for word in subject.split()):
                 results.append(t)
                 break
 
-    return results
+    return list({r["nama"]: r for r in results}.values())
 
 def find_osis_query(prompt):
     prompt = normalize(prompt)
 
-    # ==== INTI ====
     inti = osis.get("inti", {})
     for jab, data in inti.items():
         jab_text = jab.replace("_", " ")
         if jab_text in prompt:
-            return f"{jab_text.title()} adalah {data.get('nama')} ({data.get('kelas')})."
+            nama = data.get("nama")
+            kelas = data.get("kelas")
+            photo = get_osis_photo(nama)
+            return f"{jab_text.title()} adalah {nama} ({kelas}).", photo
 
-    # ==== SEKSI ====
-    seksi_list = osis.get("seksi", [])
-    for s in seksi_list:
+    for s in osis.get("seksi", []):
         nama_seksi = normalize(s.get("nama_seksi",""))
 
-        # tanya ketua seksi
-        if "ketua" in prompt and any(word in prompt for word in nama_seksi.split()):
-            ketua = s.get("ketua", {})
-            return f"Ketua Seksi {s.get('nama_seksi')} adalah {ketua.get('nama')} ({ketua.get('kelas')})."
-
-        # tanya anggota seksi
         if "anggota" in prompt and any(word in prompt for word in nama_seksi.split()):
-            anggota = s.get("anggota", [])
             text = f"Anggota Seksi {s.get('nama_seksi')}:<br>"
-            for a in anggota:
+            for a in s.get("anggota", []):
                 text += f"• {a.get('nama')} ({a.get('kelas')})<br>"
-            return text
+            return text, None
 
-        # tanya seksi umum
         if any(word in prompt for word in nama_seksi.split()):
             ketua = s.get("ketua", {})
-            return f"Ketua Seksi {s.get('nama_seksi')} adalah {ketua.get('nama')} ({ketua.get('kelas')})."
+            nama = ketua.get("nama")
+            kelas = ketua.get("kelas")
+            photo = get_osis_photo(nama)
+            return f"Ketua Seksi {s.get('nama_seksi')} adalah {nama} ({kelas}).", photo
 
-    return None
+    return None, None
 
 # ==============================
 # SESSION
@@ -265,9 +226,10 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
 
     clean_prompt = normalize(prompt)
     reply = None
+    photo = None
 
     # LIST GURU
-    if any(k in clean_prompt for k in ["daftar guru", "list guru"]):
+    if "daftar guru" in clean_prompt:
         text = "<b>Daftar Guru:</b><br><br>"
         for t in teachers:
             text += f"• {t.get('nama')}<br>"
@@ -292,9 +254,7 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
 
     # OSIS SPECIFIC
     if reply is None and osis:
-        osis_result = find_osis_query(prompt)
-        if osis_result:
-            reply = osis_result
+        reply, photo = find_osis_query(prompt)
 
     # OSIS FULL
     if reply is None and "osis" in clean_prompt:
@@ -315,5 +275,5 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
         )
         reply = completion.choices[0].message.content
 
-    render_bot(reply)
+    render_bot(reply, photo)
     st.session_state.messages.append({"role": "assistant", "content": reply})
