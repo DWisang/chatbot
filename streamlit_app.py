@@ -24,8 +24,11 @@ MODEL_NAME = "llama-3.1-8b-instant"
 # LOAD LOGO
 # ==============================
 def get_base64_image(path):
-    with open(path, "rb") as img:
-        return base64.b64encode(img.read()).decode()
+    try:
+        with open(path, "rb") as img:
+            return base64.b64encode(img.read()).decode()
+    except:
+        return ""
 
 logo_base64 = get_base64_image("logo.png")
 
@@ -184,9 +187,43 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
     reply = None
 
     # ==========================
-    # OSIS FIXED PARSER
+    # LIST GURU
     # ==========================
-    if "osis" in clean_prompt and osis:
+    if any(k in clean_prompt for k in ["daftar guru", "list guru", "semua guru"]):
+        if teachers:
+            text = "<b>Daftar Guru:</b><br><br>"
+            for t in teachers:
+                nama = t.get("nama", "-")
+                jabatan = t.get("jabatan", "")
+                if jabatan:
+                    text += f"• {nama} ({jabatan})<br>"
+                else:
+                    text += f"• {nama}<br>"
+            reply = text
+        else:
+            reply = "Data guru tidak ditemukan."
+
+    # ==========================
+    # LIST WAKA
+    # ==========================
+    elif any(k in clean_prompt for k in ["waka", "wakil kepala"]):
+        waka_list = [
+            f"{t.get('jabatan')} - {t.get('nama')}"
+            for t in teachers
+            if "waka" in t.get("jabatan","").lower()
+            or "wakil kepala" in t.get("jabatan","").lower()
+        ]
+        if waka_list:
+            reply = "<b>Daftar Wakil Kepala Sekolah:</b><br><br>"
+            for w in waka_list:
+                reply += f"• {w}<br>"
+        else:
+            reply = "Data Wakil Kepala Sekolah tidak ditemukan."
+
+    # ==========================
+    # OSIS
+    # ==========================
+    elif "osis" in clean_prompt and osis:
 
         periode = osis.get("periode", "-")
         inti = osis.get("inti", {})
@@ -213,7 +250,6 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
     # STREAMING AI (NO ANIMATION)
     # ==========================
     if reply is None:
-
         full_reply = ""
         stream = client.chat.completions.create(
             model=MODEL_NAME,
