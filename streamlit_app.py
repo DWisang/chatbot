@@ -30,10 +30,10 @@ with open("school_profile.json", "r", encoding="utf-8") as f:
     school_data = json.load(f)
 
 with open("osis.json", "r", encoding="utf-8") as f:
-    osis_data = json.load(f)  # TANPA ["osis"]
+    osis_data = json.load(f)["osis"]   # ROOT KEY FIXED
 
 # ==============================
-# HELPER
+# HELPER FUNCTIONS
 # ==============================
 def normalize(text):
     text = text.lower()
@@ -195,7 +195,7 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
     # ==============================
     # LIST SEKSI
     # ==============================
-    elif "list seksi" in clean_prompt or "seksi osis" in clean_prompt:
+    elif "list seksi" in clean_prompt:
         list_html = "".join([
             f"<li>{s['nama_seksi']}</li>"
             for s in osis_data["seksi"]
