@@ -44,6 +44,9 @@ def normalize(text):
     text = re.sub(r"[^\w\s]", " ", text)
     return text.strip()
 
+def format_bullet_list(items):
+    return "\n".join([f"- {item}" for item in items])
+
 def find_teacher_by_name(prompt):
     for teacher in teachers:
         if normalize(teacher.get("nama", "")) in prompt:
@@ -83,7 +86,6 @@ st.caption("Chatbot AI Resmi Sekolah")
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# tampilkan chat lama
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
@@ -93,7 +95,6 @@ for msg in st.session_state.messages:
 # ==============================
 if prompt := st.chat_input("Tulis pertanyaan Anda..."):
 
-    # tampilkan user langsung
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -107,11 +108,13 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
     if "guru" in clean_prompt and "ganteng" in clean_prompt:
         reply = "Guru paling ganteng adalah Pak Dhimas 😎"
 
+    identitas = school_data.get("identitas", {})
+    alamat = school_data.get("alamat", {})
+    statistik = school_data.get("statistik", {})
+    legalitas = school_data.get("legalitas", {})
+    osis = school_data.get("osis", {})
+
     if reply is None:
-        identitas = school_data.get("identitas", {})
-        alamat = school_data.get("alamat", {})
-        statistik = school_data.get("statistik", {})
-        legalitas = school_data.get("legalitas", {})
 
         if "alamat" in clean_prompt:
             reply = (
@@ -129,7 +132,42 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
         elif "waka" in clean_prompt:
             waka_list = find_all_waka()
             if waka_list:
-                reply = "Daftar Wakil Kepala Sekolah:\n" + "\n".join(waka_list)
+                reply = "## Daftar Wakil Kepala Sekolah\n" + format_bullet_list(waka_list)
+            else:
+                reply = "Data Wakil Kepala Sekolah tidak tersedia."
+
+        elif "osis" in clean_prompt:
+            if osis:
+
+                periode = osis.get("periode", "-")
+                inti = osis.get("inti", {})
+                seksi = osis.get("seksi", [])
+
+                osis_text = f"## Struktur OSIS\n"
+                osis_text += f"**Periode:** {periode}\n\n"
+
+                osis_text += "### Pengurus Inti\n"
+                for jabatan, data in inti.items():
+                    nama = data.get("nama", "-")
+                    kelas = data.get("kelas", "-")
+                    jabatan_format = jabatan.replace("_", " ").title()
+                    osis_text += f"- **{jabatan_format}**: {nama} ({kelas})\n"
+
+                osis_text += "\n### Seksi Bidang\n"
+                for s in seksi:
+                    nama_seksi = s.get("nama_seksi", "-")
+                    ketua = s.get("ketua", {})
+                    anggota = s.get("anggota", [])
+
+                    osis_text += f"\n**{nama_seksi}**\n"
+                    osis_text += f"- Ketua: {ketua.get('nama','-')} ({ketua.get('kelas','-')})\n"
+
+                    for a in anggota:
+                        osis_text += f"  - Anggota: {a.get('nama','-')} ({a.get('kelas','-')})\n"
+
+                reply = osis_text
+            else:
+                reply = "Data OSIS tidak tersedia."
 
     if reply is None:
         teacher_match = find_teacher_by_name(clean_prompt)
@@ -143,10 +181,10 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
         subject_matches = find_teacher_by_subject(clean_prompt)
         if subject_matches:
             names = [t.get("nama") for t in subject_matches]
-            reply = f"Guru yang mengampu mata pelajaran tersebut adalah: {', '.join(names)}."
+            reply = "## Guru Pengampu\n" + format_bullet_list(names)
 
     # ==========================
-    # STREAMING AI (ANTI DELAY)
+    # STREAMING AI
     # ==========================
     if reply is None:
 
