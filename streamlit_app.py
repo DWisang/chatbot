@@ -116,7 +116,7 @@ header {{visibility:hidden;}}
 """, unsafe_allow_html=True)
 
 # ==============================
-# HELPER
+# HELPER FUNCTIONS
 # ==============================
 def normalize(text):
     return re.sub(r"[^\w\s]", " ", text.lower()).strip()
@@ -148,46 +148,52 @@ def find_teacher_by_subject(prompt):
     prompt = normalize(prompt)
     results = []
 
-    agama_keywords = {
-        "islam": "pendidikan agama islam",
-        "kristen": "agama kristen",
-        "katolik": "agama katolik",
-        "buddha": "agama buddha",
-    }
-
     for t in teachers:
         for m in t.get("mapel", []):
             subject = normalize(m)
-
-            if subject in prompt:
+            if subject in prompt or any(word in prompt for word in subject.split()):
                 results.append(t)
                 break
 
-            for key, full in agama_keywords.items():
-                if key in prompt and full in subject:
-                    results.append(t)
-                    break
+    # remove duplicates
+    unique = []
+    seen = set()
+    for r in results:
+        if r["nama"] not in seen:
+            unique.append(r)
+            seen.add(r["nama"])
 
-            if any(word in prompt for word in subject.split()):
-                results.append(t)
-                break
-
-    return list({r["nama"]: r for r in results}.values())
+    return unique
 
 def find_osis_query(prompt):
     prompt = normalize(prompt)
-
     inti = osis.get("inti", {})
-    for jab, data in inti.items():
-        jab_text = jab.replace("_", " ")
-        if jab_text in prompt:
-            nama = data.get("nama")
-            kelas = data.get("kelas")
-            photo = get_osis_photo(nama)
-            return f"{jab_text.title()} adalah {nama} ({kelas}).", photo
+
+    jabatan_mapping = {
+        "ketua osis": "ketua_umum",
+        "ketua umum": "ketua_umum",
+        "wakil ketua": "wakil_ketua",
+        "ketua harian": "ketua_harian",
+        "sekretaris umum": "sekretaris_umum",
+        "sekretaris": "sekretaris_umum",
+        "wakil sekretaris": "wakil_sekretaris",
+        "bendahara osis": "bendahara_umum",
+        "bendahara umum": "bendahara_umum",
+        "bendahara": "bendahara_umum",
+        "wakil bendahara": "wakil_bendahara",
+    }
+
+    for key, value in jabatan_mapping.items():
+        if key in prompt:
+            data = inti.get(value)
+            if data:
+                nama = data.get("nama")
+                kelas = data.get("kelas")
+                photo = get_osis_photo(nama)
+                return f"{key.title()} adalah {nama} ({kelas}).", photo
 
     for s in osis.get("seksi", []):
-        nama_seksi = normalize(s.get("nama_seksi",""))
+        nama_seksi = normalize(s.get("nama_seksi", ""))
 
         if "anggota" in prompt and any(word in prompt for word in nama_seksi.split()):
             text = f"Anggota Seksi {s.get('nama_seksi')}:<br>"
@@ -205,7 +211,7 @@ def find_osis_query(prompt):
     return None, None
 
 # ==============================
-# SESSION
+# SESSION STATE
 # ==============================
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -253,48 +259,9 @@ if prompt := st.chat_input("Tulis pertanyaan Anda..."):
         reply = text
 
     # OSIS SPECIFIC
-   def find_osis_query(prompt):
-    prompt = normalize(prompt)
+    if reply is None and osis:
+        reply, photo = find_osis_query(prompt)
 
-    inti = osis.get("inti", {})
-
-    jabatan_mapping = {
-        "ketua osis": "ketua_umum",
-        "ketua umum": "ketua_umum",
-        "wakil ketua": "wakil_ketua",
-        "ketua harian": "ketua_harian",
-        "sekretaris umum": "sekretaris_umum",
-        "sekretaris": "sekretaris_umum",
-        "wakil sekretaris": "wakil_sekretaris",
-        "bendahara osis": "bendahara_umum",
-        "bendahara umum": "bendahara_umum",
-        "bendahara": "bendahara_umum",
-        "wakil bendahara": "wakil_bendahara",
-    }
-
-    # ==== CEK INTI ====
-    for key, value in jabatan_mapping.items():
-        if key in prompt:
-            data = inti.get(value)
-            if data:
-                nama = data.get("nama")
-                kelas = data.get("kelas")
-                photo = get_osis_photo(nama)
-                return f"{key.title()} adalah {nama} ({kelas}).", photo
-
-    # ==== CEK SEKSI ====
-    for s in osis.get("seksi", []):
-        nama_seksi = normalize(s.get("nama_seksi", ""))
-
-        if any(word in prompt for word in nama_seksi.split()):
-            ketua = s.get("ketua", {})
-            nama = ketua.get("nama")
-            kelas = ketua.get("kelas")
-            photo = get_osis_photo(nama)
-            return f"Ketua Seksi {s.get('nama_seksi')} adalah {nama} ({kelas}).", photo
-
-    return None, None
-       
     # OSIS FULL
     if reply is None and "osis" in clean_prompt:
         text = f"<b>Struktur OSIS Periode {osis.get('periode')}</b><br><br>"
